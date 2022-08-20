@@ -24,9 +24,9 @@ async fn index() -> HttpResponse {
 
 #[actix_web::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    println!("Listening on port 8080");
+    println!("Listening on port 8088");
     HttpServer::new(|| App::new().service(index))
-        .bind(("0.0.0.0", 8080))?
+        .bind(("0.0.0.0", 8088))?
         .run()
         .await
 }
