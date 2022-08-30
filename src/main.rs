@@ -21,7 +21,7 @@ async fn main() -> std::io::Result<()> {
 
     println!("Listening on port 8080");
 
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         let app_state = AppState {
             dbpool: dbpool.clone(),
             inmemory_products: Mutex::new(vec![
@@ -37,7 +37,9 @@ async fn main() -> std::io::Result<()> {
             .service(get_products_fromdb)
             .service(get_products_insert)
     })
-    .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+    .bind(("0.0.0.0", 8080))?;
+
+    println!("{:?}", server.addrs());
+
+    server.run().await
 }
