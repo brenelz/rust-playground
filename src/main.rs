@@ -1,32 +1,43 @@
-use actix_web::{get, App, HttpResponse, HttpServer};
-use serde::{Deserialize, Serialize};
+use actix_web::{web::Data, App, HttpServer};
+use domain::Product;
+use r2d2_sqlite::SqliteConnectionManager;
+use routes::{get_index, get_products, get_products_fromdb, get_products_insert};
+use std::sync::Mutex;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Product {
-    title: String,
-    price: f64,
+mod db;
+mod domain;
+mod routes;
+
+#[derive(Debug)]
+struct AppState {
+    inmemory_products: Mutex<Vec<Product>>,
+    dbpool: db::Pool,
 }
 
-#[get("/")]
-async fn index() -> HttpResponse {
-    let index = [
-        Product {
-            title: "Product1".to_string(),
-            price: 3.00,
-        },
-        Product {
-            title: "Product2".to_string(),
-            price: 3.00,
-        },
-    ];
-    HttpResponse::Ok().json(index)
-}
-
-#[actix_web::main] // or #[tokio::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Listening on port 8088");
-    HttpServer::new(|| App::new().service(index))
-        .bind(("0.0.0.0", 8088))?
-        .run()
-        .await
+    let manager = SqliteConnectionManager::file("db/products.db");
+    let dbpool = db::Pool::new(manager).unwrap();
+
+    println!("Listening on port 8080");
+
+    HttpServer::new(move || {
+        let app_state = AppState {
+            dbpool: dbpool.clone(),
+            inmemory_products: Mutex::new(vec![
+                Product::new("test123".to_owned()),
+                Product::new("test12345".to_owned()),
+            ]),
+        };
+
+        App::new()
+            .app_data(Data::new(app_state))
+            .service(get_index)
+            .service(get_products)
+            .service(get_products_fromdb)
+            .service(get_products_insert)
+    })
+    .bind(("0.0.0.0", 8080))?
+    .run()
+    .await
 }
